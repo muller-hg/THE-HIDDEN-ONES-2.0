@@ -3,159 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANIMUS TERMINAL | THE HIDDEN ONES</title>
+    <title>ABSTERGO INDUSTRIES | NEURAL NETWORK</title>
     <style>
-        body, html {
-            background-color: #020507; color: #ffffff;
-            font-family: 'Courier New', Courier, monospace;
-            height: 100%; margin: 0; display: flex;
-            justify-content: center; align-items: center; overflow: hidden;
+        :root {
+            --animus-cyan: #00ffcc;
+            --terminal-bg: #02080a;
         }
 
+        body, html {
+            background-color: var(--terminal-bg);
+            color: var(--animus-cyan);
+            font-family: 'Courier New', monospace;
+            height: 100%; margin: 0; overflow: hidden;
+        }
+
+        #matrix-canvas { position: fixed; top: 0; left: 0; z-index: 1; opacity: 0.15; }
         .scanlines {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
-            background-size: 100% 4px; z-index: 2000; pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px; z-index: 10; pointer-events: none;
         }
 
-        /* OVERLAYS */
-        #fail-overlay, #sync-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            display: none; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 9000; text-transform: uppercase; font-weight: bold;
-        }
-        #fail-overlay { background: rgba(150, 0, 0, 0.95); color: white; font-size: 3rem; letter-spacing: 10px; }
-        #sync-overlay { background: #000; color: #00ffcc; font-size: 1.2rem; letter-spacing: 4px; text-align: center; line-height: 2; }
-
-        .glitch-text { animation: textGlitch 0.1s infinite; }
-        @keyframes textGlitch {
-            0% { transform: translate(1px, 1px); }
-            50% { transform: translate(-1px, -1px); opacity: 0.8; }
-            100% { transform: translate(0); }
-        }
-
-        #video-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: none; z-index: 5000;
-        }
-        video { width: 100%; height: 100%; object-fit: contain; }
-
-        .portal-box {
-            position: relative; text-align: center; padding: 50px;
-            background: rgba(5, 10, 15, 0.95); border: 1px solid #1a3a3a;
-            width: 380px; z-index: 100; backdrop-filter: blur(10px);
+        #ui-wrapper {
+            position: relative; z-index: 20;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; justify-content: center;
         }
 
         .insignia {
-            width: 70px; height: 90px; margin: 0 auto 30px;
-            background-color: #00ffcc; 
+            width: 100px; height: 130px; margin-bottom: 20px;
+            background-color: var(--animus-cyan);
             clip-path: polygon(50% 0%, 100% 100%, 85% 100%, 50% 35%, 15% 100%, 0% 100%);
-            animation: flicker 3s infinite;
-        }
-        @keyframes flicker { 0%, 90%, 100% { opacity: 1; } 92%, 95% { opacity: 0.4; } }
-
-        input, #init-btn, #memory-btn {
-            width: 100%; padding: 15px; margin-top: 20px;
-            font-family: inherit; text-transform: uppercase; letter-spacing: 2px;
-            outline: none; border: 1px solid #1a3a3a; box-sizing: border-box;
+            filter: drop-shadow(0 0 15px var(--animus-cyan));
+            animation: flicker 4s infinite;
+            cursor: pointer;
         }
 
-        input { background: #000; color: #00ffcc; display: none; }
-        #init-btn { background: #00ffcc; color: #000; cursor: pointer; font-weight: bold; }
-        #memory-btn { background: transparent; border: 2px solid #00ffcc; color: #00ffcc; cursor: pointer; display: none; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; transform: scale(1); }
+            20%, 22%, 24%, 55% { opacity: 0.3; transform: scale(0.99); }
+        }
+
+        .terminal-box {
+            background: rgba(0, 15, 20, 0.9);
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            padding: 40px; width: 85%; max-width: 750px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 1);
+            backdrop-filter: blur(12px);
+            display: none;
+        }
+
+        .header { 
+            font-size: 1.2rem; letter-spacing: 8px; margin-bottom: 25px; 
+            border-bottom: 1px solid rgba(0, 255, 204, 0.2); padding-bottom: 15px; 
+            color: #fff; text-align: center;
+        }
+        
+        .data-stream { 
+            font-size: 0.85rem; line-height: 1.8; height: 250px; 
+            overflow-y: auto; margin-bottom: 20px; color: var(--animus-cyan);
+            text-shadow: 0 0 5px var(--animus-cyan);
+            scrollbar-width: none;
+        }
+        .data-stream::-webkit-scrollbar { display: none; }
+
+        .btn {
+            background: transparent; border: 1px solid var(--animus-cyan);
+            color: var(--animus-cyan); padding: 12px 20px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 2px; transition: 0.4s;
+            margin: 5px; font-family: inherit; font-size: 0.75rem;
+        }
+
+        .btn:hover { background: var(--animus-cyan); color: #000; box-shadow: 0 0 20px var(--animus-cyan); }
+
+        #fail-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(80, 0, 0, 0.95); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            font-size: 3rem; font-weight: bold; letter-spacing: 15px; color: white;
+        }
+
+        #video-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 500; display: none;
+        }
+        video { width: 100%; height: 100%; object-fit: contain; }
+
+        input {
+            background: rgba(0, 255, 204, 0.05); border: none; 
+            border-bottom: 1px solid var(--animus-cyan);
+            color: white; padding: 15px; width: 100%; outline: none; 
+            font-family: inherit; box-sizing: border-box; text-align: center;
+        }
     </style>
 </head>
 <body>
 
+    <canvas id="matrix-canvas"></canvas>
     <div class="scanlines"></div>
-    
-    <div id="fail-overlay">DESYNCHRONIZED</div>
-    
-    <div id="sync-overlay">
-        <div class="glitch-text">> ACCESSING MEMORY DATA...</div>
-        <div style="font-size: 2rem; color: #fff; margin-top: 10px;">THE TRUTH</div>
-    </div>
+    <div id="fail-overlay">DESYNC</div>
 
-    <div id="video-layer">
+    <div id="video-container">
         <video id="memory-video" playsinline>
             <source src="videoplayback.mp4" type="video/mp4">
         </video>
     </div>
 
-    <div class="portal-box" id="terminal-ui">
-        <div class="insignia"></div>
-        <div id="status-text" style="font-size: 0.7rem; color: #3a5a5a;">// SYSTEM_IDLE</div>
-        
-        <button id="init-btn" onclick="initialize()">INITIALIZE ANIMUS</button>
-        <input type="text" id="passInput" placeholder="[ ENTER KEY ]" autocomplete="off">
-        <button id="memory-btn" onclick="engageMemory()">[ ACCESS MEMORY CORE ]</button>
+    <div id="ui-wrapper">
+        <div class="insignia" id="master-insignia" onclick="initAnimus()"></div>
+        <div id="init-text" style="letter-spacing: 5px; font-size: 0.8rem; opacity: 0.6;">[ INITIALIZE NEURAL LINK ]</div>
+
+        <div class="terminal-box" id="main-terminal">
+            <div class="header">ANIMUS_OS // MASTER_ARCHIVE</div>
+            <div class="data-stream" id="stream"></div>
+            
+            <div id="input-area">
+                <input type="text" id="passInput" placeholder="ENTER ACCESS CODE" autocomplete="off">
+            </div>
+
+            <div id="action-buttons" style="display:none; margin-top:20px; text-align: center;">
+                <button class="btn" onclick="triggerTruth()">THE TRUTH</button>
+                <button class="btn" onclick="showLore('altair')">ALTAÏR LORE</button>
+                <button class="btn" onclick="showLore('ezio')">EZIO LORE</button>
+                <button class="btn" onclick="location.reload()">RESET</button>
+            </div>
+        </div>
     </div>
 
     <script>
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        const stream = document.getElementById('stream');
         const video = document.getElementById('memory-video');
-        const input = document.getElementById('passInput');
-        const initBtn = document.getElementById('init-btn');
-        const memBtn = document.getElementById('memory-btn');
-        const status = document.getElementById('status-text');
-        
         let audioCtx;
 
-        function initialize() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            initBtn.style.display = "none";
-            input.style.display = "block";
-            input.focus();
-            status.innerText = "// RECONSTRUCTING_STREAM";
-            video.load(); 
-        }
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%#&_";
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
 
-        function playSound(freq, type) {
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(2, 8, 10, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#00ffcc";
+            ctx.font = fontSize + "px monospace";
+            for (let i = 0; i < drops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 40);
+
+        function playLofiSfx(freq) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.type = type;
+            const filter = audioCtx.createBiquadFilter();
+            osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.5);
+            filter.type = "lowpass";
+            filter.frequency.setValueAtTime(350, audioCtx.currentTime); 
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
+            osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.12);
         }
 
-        input.addEventListener('keypress', (e) => {
+        async function typeText(text) {
+            stream.innerHTML = "";
+            const lines = text.split('\n');
+            for (let line of lines) {
+                const lineDiv = document.createElement('div');
+                lineDiv.style.marginBottom = "10px";
+                stream.appendChild(lineDiv);
+                for (let char of line) {
+                    lineDiv.innerHTML += char;
+                    if (char !== " ") playLofiSfx(140 + Math.random() * 60); 
+                    await new Promise(r => setTimeout(r, 30));
+                    stream.scrollTop = stream.scrollHeight;
+                }
+            }
+        }
+
+        function initAnimus() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            document.getElementById('master-insignia').style.opacity = "0.1";
+            document.getElementById('init-text').style.display = 'none';
+            document.getElementById('main-terminal').style.display = 'block';
+            typeText("> CONNECTION ESTABLISHED...\n> NEURAL LINK SYNCED.\n> STANDING BY FOR OATH...");
+        }
+
+        document.getElementById('passInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                const val = input.value.toLowerCase().trim();
+                const val = this.value.toLowerCase().trim();
                 if (val === "nothing is true everything is permitted") {
-                    playSound(880, 'sine');
-                    input.style.display = "none";
-                    memBtn.style.display = "block";
-                    status.innerText = "// ACCESS_GRANTED";
+                    playLofiSfx(400); 
+                    this.parentElement.style.display = 'none';
+                    document.getElementById('action-buttons').style.display = 'block';
+                    typeText("> ACCESS GRANTED.\n> THE ARCHIVES OF THE MENTORS ARE OPEN.");
                 } else {
-                    playSound(110, 'sawtooth');
-                    document.getElementById('fail-overlay').style.display = "flex";
-                    setTimeout(() => {
-                        document.getElementById('fail-overlay').style.display = "none";
-                        input.value = "";
-                    }, 1500);
+                    playLofiSfx(70); 
+                    document.getElementById('fail-overlay').style.display = 'flex';
+                    setTimeout(() => { document.getElementById('fail-overlay').style.display = 'none'; }, 1200);
+                    this.value = "";
                 }
             }
         });
 
-        function engageMemory() {
-            document.getElementById('sync-overlay').style.display = "flex";
-            
-            setTimeout(() => {
-                document.getElementById('sync-overlay').style.display = "none";
-                document.getElementById('terminal-ui').style.display = "none";
-                document.getElementById('video-layer').style.display = "block";
-                video.play();
-            }, 3500); // 3.5 seconds to read the screen
+        function showLore(hero) {
+            const data = {
+                altair: "> SUBJECT: ALTAÏR IBN-LA'AHAD (1165 – 1257)\n\n> Born into the Order, Altaïr’s life was defined by the Holy Lands and the third Crusade. After his fall from grace at Solomon's Temple, he began a journey of redemption that changed the Creed forever.\n\n> Through the Apple of Eden, he gained knowledge beyond his time—redesigning the Hidden Blade, inventing new assassination techniques, and writing the legendary Codex. He stayed true to the Holy Land until his final breath in the library of Masyaf, guarding the truth for the prophet to come.",
+                ezio: "> SUBJECT: EZIO AUDITORE DA FIRENZE (1459 – 1524)\n\n> A nobleman of the Renaissance who turned to the shadows after the betrayal of his family. Ezio did not just fight Templars; he built a brotherhood. \n\n> His most vital ally was Leonardo da Vinci, whose genius decoded the Codex pages and forged Ezio's specialized weapons, including the hidden gun and dual blades. Together, they navigated the intrigues of Venice and Rome. Ezio eventually moved beyond vengeance, realizing he was but a 'conduit' for a message he was never meant to understand."
+            };
+            typeText(data[hero]);
         }
 
-        video.onended = () => {
-            window.location.href = "https://assassinscreed.fandom.com/wiki/The_Truth";
-        };
+        function triggerTruth() {
+            typeText("> DECRYPTING SUBJECT_16 DATA: THE TRUTH...");
+            setTimeout(() => {
+                document.getElementById('video-container').style.display = 'block';
+                video.play();
+            }, 2500);
+        }
+
+        video.onended = () => { window.location.href = "https://assassinscreed.fandom.com/wiki/The_Truth"; };
     </script>
 </body>
 </html>
